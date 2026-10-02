@@ -1,0 +1,6 @@
+*.pot
+*.bloodhound
+loot/
+*.zip
+collected/
+.env
