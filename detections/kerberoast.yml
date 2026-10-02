@@ -1,0 +1,23 @@
+title: Potential Kerberoasting via Service Ticket Requests
+id: 5c1b1b1a-0001-4a00-aaaa-ad-attack-lab
+status: experimental
+description: Detects bulk TGS-REP requests using weak RC4 encryption, the signature of Kerberoasting.
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4769
+    TicketEncryptionType: '0x17'   # RC4-HMAC, weak; attackers force this to crack offline
+    ServiceName|endswith: '$'       # exclude machine accounts refine as needed
+  filter:
+    ServiceName|startswith: 'krbtgt'
+  timeframe: 5m
+  condition: selection and not filter | count(ServiceName) by IpAddress > 5
+falsepositives:
+  - Vulnerability scanners enumerating SPNs
+  - Legacy applications still using RC4
+level: high
+tags:
+  - attack.credential_access
+  - attack.t1558.003
