@@ -65,4 +65,4 @@ hashcat -m 1000 domain.ntds.ntds ../gpu-hash-cracking/wordlists/rockyou.txt -r d
 ```
 
 That closes the loop: **enumerate → roast → crack → escalate → DCSync → crack
-everything.** Every step has a detection in [../docs/defense.md](../docs/defense.md).
+everything.** Every step has a detection in the [defense notes](../docs/defense.md).
