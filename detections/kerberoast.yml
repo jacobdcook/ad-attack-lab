@@ -9,11 +9,12 @@ detection:
   selection:
     EventID: 4769
     TicketEncryptionType: '0x17'   # RC4-HMAC, weak; attackers force this to crack offline
-    ServiceName|endswith: '$'       # exclude machine accounts refine as needed
-  filter:
+  filter_krbtgt:
     ServiceName|startswith: 'krbtgt'
+  filter_machine:
+    ServiceName|endswith: '$'      # machine accounts, not Kerberoast targets
   timeframe: 5m
-  condition: selection and not filter | count(ServiceName) by IpAddress > 5
+  condition: selection and not filter_krbtgt and not filter_machine | count(ServiceName) by IpAddress > 5
 falsepositives:
   - Vulnerability scanners enumerating SPNs
   - Legacy applications still using RC4
