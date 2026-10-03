@@ -1,0 +1,19 @@
+title: AS-REP Roasting Preauth Disabled Account
+id: 5c1b1b1a-0002-4a00-aaaa-ad-attack-lab
+status: experimental
+description: Detects Kerberos AS-REQ for accounts with pre-authentication disabled, allowing offline cracking.
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4768
+    PreAuthType: '0'               # 0 = pre-auth not required = roastable
+    TicketEncryptionType: '0x17'   # RC4
+  condition: selection
+falsepositives:
+  - Rare legacy accounts intentionally configured without pre-auth baseline them
+level: high
+tags:
+  - attack.credential_access
+  - attack.t1558.004
