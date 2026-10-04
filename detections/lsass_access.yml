@@ -1,0 +1,21 @@
+title: Suspicious LSASS Memory Access
+id: 5c1b1b1a-0005-4a00-aaaa-ad-attack-lab
+status: experimental
+description: Detects processes opening LSASS with read access, as credential dumping tools (Mimikatz) do.
+logsource:
+  product: windows
+  category: process_access
+detection:
+  selection:
+    EventID: 10                      # Sysmon ProcessAccess
+    TargetImage|endswith: '\lsass.exe'
+    GrantedAccess:
+      - '0x1010'
+      - '0x1410'
+  condition: selection
+falsepositives:
+  - Some AV/EDR and backup agents legitimately read LSASS allowlist them
+level: high
+tags:
+  - attack.credential_access
+  - attack.t1003.001
