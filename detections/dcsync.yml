@@ -1,0 +1,22 @@
+title: DCSync Replication From Non-DC
+id: 5c1b1b1a-0003-4a00-aaaa-ad-attack-lab
+status: experimental
+description: Detects directory replication rights used from a host that is not a domain controller (secretsdump/DCSync).
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4662
+    Properties|contains:
+      - '1131f6aa-9c07-11d1-f79f-00c04fc2dcd2'  # DS-Replication-Get-Changes
+      - '1131f6ad-9c07-11d1-f79f-00c04fc2dcd2'  # DS-Replication-Get-Changes-All
+  filter_dc:
+    SubjectUserName|endswith: '$'   # legit DCs are machine accounts allowlist yours
+  condition: selection and not filter_dc
+falsepositives:
+  - Azure AD Connect and real domain controllers allowlist those accounts
+level: critical
+tags:
+  - attack.credential_access
+  - attack.t1003.006
