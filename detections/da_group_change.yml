@@ -1,0 +1,18 @@
+title: Member Added to Domain Admins
+id: 5c1b1b1a-0004-4a00-aaaa-ad-attack-lab
+status: experimental
+description: Any addition to Domain Admins. This group should change almost never, so every change is worth a look.
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4728
+    TargetUserName: 'Domain Admins'
+  condition: selection
+falsepositives:
+  - Planned administrative onboarding correlate with a change ticket
+level: high
+tags:
+  - attack.privilege_escalation
+  - attack.t1098
