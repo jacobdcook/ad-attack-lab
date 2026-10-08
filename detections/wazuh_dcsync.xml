@@ -1,0 +1,12 @@
+<!-- Wazuh local rule: DCSync replication from a non-DC (Event 4662 with replication GUID) -->
+<group name="windows,credential_access,">
+  <rule id="100151" level="14">
+    <if_group>windows_security</if_group>
+    <field name="win.system.eventID">^4662$</field>
+    <field name="win.eventdata.properties">1131f6aa-9c07-11d1-f79f-00c04fc2dcd2|1131f6ad-9c07-11d1-f79f-00c04fc2dcd2</field>
+    <description>DCSync: directory replication requested ($(win.eventdata.subjectUserName)) verify source is a DC</description>
+    <mitre>
+      <id>T1003.006</id>
+    </mitre>
+  </rule>
+</group>
