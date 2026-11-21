@@ -43,6 +43,12 @@ function Build-Domain {
     Import-Module ActiveDirectory
     New-ADOrganizationalUnit -Name "Lab" -Path "DC=corp,DC=local" -ErrorAction SilentlyContinue
 
+    # The weak passwords below are the point of the lab, but the default domain
+    # policy (complexity on) rejects them, so jsmith/bchen never get a hash.
+    # Turn complexity off first.
+    Set-ADDefaultDomainPasswordPolicy -Identity corp.local `
+        -ComplexityEnabled $false -MinPasswordLength 1 -MinPasswordAge 0
+
     # --- standard users (passwords match gpu-hash-cracking answer key) ---
     New-LabUser jsmith   "John Smith"    "password1"   -NoPreAuth   # AS-REP roastable
     New-LabUser mjones   "Mary Jones"    "Summer2024!"
