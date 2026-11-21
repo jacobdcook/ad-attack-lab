@@ -1,5 +1,5 @@
 title: AS-REP Roasting Preauth Disabled Account
-id: 5c1b1b1a-0002-4a00-aaaa-ad-attack-lab
+id: b010bd5a-6454-4552-84a6-8f3c10df33a1
 status: experimental
 description: Detects Kerberos AS-REQ for accounts with pre-authentication disabled, allowing offline cracking.
 logsource:

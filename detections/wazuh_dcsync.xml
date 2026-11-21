@@ -4,7 +4,8 @@
     <if_group>windows_security</if_group>
     <field name="win.system.eventID">^4662$</field>
     <field name="win.eventdata.properties">1131f6aa-9c07-11d1-f79f-00c04fc2dcd2|1131f6ad-9c07-11d1-f79f-00c04fc2dcd2</field>
-    <description>DCSync: directory replication requested ($(win.eventdata.subjectUserName)) verify source is a DC</description>
+    <field name="win.eventdata.subjectUserName" negate="yes">^DC01\$$</field>  <!-- allowlist real DC computer accounts -->
+    <description>DCSync: directory replication requested by non-DC account ($(win.eventdata.subjectUserName))</description>
     <mitre>
       <id>T1003.006</id>
     </mitre>

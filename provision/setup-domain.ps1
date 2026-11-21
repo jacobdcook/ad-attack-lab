@@ -76,9 +76,52 @@ function Build-Domain {
     Write-Host "[+] CORP.LOCAL built. Users, SPNs, AS-REP, and ACL path in place." -ForegroundColor Green
 }
 
+function Enable-Logging {
+    # Without this the DC writes no 4768/4769/4662/4728 and no Sysmon 10, so the
+    # detections in detections/ have nothing to fire on. Lab needs internet for Sysmon.
+    Write-Host "[*] Enabling audit policy (4768/4769/4662/4728)..." -ForegroundColor Cyan
+    auditpol /set /subcategory:"Kerberos Authentication Service"     /success:enable /failure:enable | Out-Null
+    auditpol /set /subcategory:"Kerberos Service Ticket Operations"  /success:enable /failure:enable | Out-Null
+    auditpol /set /subcategory:"Directory Service Access"            /success:enable /failure:enable | Out-Null
+    auditpol /set /subcategory:"Security Group Management"           /success:enable /failure:enable | Out-Null
+
+    # 4662 for DCSync needs an audit ACE for the replication extended rights on the
+    # domain head; the default SACL does not cover them. Add one for Everyone.
+    Write-Host "[*] Adding SACL for replication rights (for 4662)..." -ForegroundColor Cyan
+    $root = (Get-ADDomain).DistinguishedName
+    $everyone = New-Object System.Security.Principal.SecurityIdentifier "S-1-1-0"
+    $acl = Get-Acl "AD:$root" -Audit
+    foreach ($guid in @('1131f6aa-9c07-11d1-f79f-00c04fc2dcd2',
+                        '1131f6ad-9c07-11d1-f79f-00c04fc2dcd2')) {
+        $ace = New-Object System.DirectoryServices.ActiveDirectoryAuditRule(
+            $everyone, "ExtendedRight", "Success",
+            [guid]$guid, "None")
+        $acl.AddAuditRule($ace)
+    }
+    Set-Acl "AD:$root" $acl
+
+    Write-Host "[*] Installing Sysmon (for LSASS Event 10)..." -ForegroundColor Cyan
+    $cfg = "C:\lab\sysmon.xml"
+    New-Item -ItemType Directory -Path C:\lab -Force | Out-Null
+    @'
+<Sysmon schemaversion="4.90">
+  <EventFiltering>
+    <ProcessAccess onmatch="include">
+      <TargetImage condition="end with">lsass.exe</TargetImage>
+    </ProcessAccess>
+  </EventFiltering>
+</Sysmon>
+'@ | Set-Content -Encoding ASCII $cfg
+    $exe = "C:\lab\Sysmon64.exe"
+    Invoke-WebRequest "https://live.sysinternals.com/Sysmon64.exe" -OutFile $exe
+    & $exe -accepteula -i $cfg | Out-Null
+    Write-Host "[+] Logging enabled: audit policy, replication SACL, Sysmon." -ForegroundColor Green
+}
+
 # Decide which phase we are in: not yet a DC -> install; already a DC -> build.
 if ((Get-WmiObject Win32_ComputerSystem).DomainRole -lt 4) {
     Install-Forest
 } else {
     Build-Domain
+    Enable-Logging
 }

@@ -1,5 +1,5 @@
 title: Member Added to Domain Admins
-id: 5c1b1b1a-0004-4a00-aaaa-ad-attack-lab
+id: b1528be6-3a90-489e-8c83-208ffe6b8ab7
 status: experimental
 description: Any addition to Domain Admins. This group should change almost never, so every change is worth a look.
 logsource:

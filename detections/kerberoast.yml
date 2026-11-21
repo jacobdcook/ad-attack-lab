@@ -1,5 +1,5 @@
 title: Potential Kerberoasting via Service Ticket Requests
-id: 5c1b1b1a-0001-4a00-aaaa-ad-attack-lab
+id: 84e45c46-a833-448a-9de1-5384487134f6
 status: experimental
 description: Detects bulk TGS-REP requests using weak RC4 encryption, the signature of Kerberoasting.
 logsource:
