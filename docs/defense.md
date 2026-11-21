@@ -62,8 +62,10 @@ signal, the false positives, and an interview-ready sentence.
 ## 6. LSASS dump (local credential theft)
 
 - **Log**: **Sysmon Event ID 10** (ProcessAccess) targeting `lsass.exe`.
-- **Signal**: a non-system process opening LSASS with `GrantedAccess` 0x1010 or
-  0x1410 (read memory). Also Sysmon 1 for `comsvcs.dll MiniDump`, `procdump`.
+- **Signal**: a process opening LSASS with a read or full-access `GrantedAccess`
+  (0x1010, 0x1410, 0x1438, 0x143a, 0x1fffff, 0x1f0fff-0x1f3fff). Real procdump
+  and comsvcs use 0x1fffff. Defender is excluded by full image path, not name.
+  Also Sysmon 1 for `comsvcs.dll MiniDump`, `procdump`.
 - **Prevent**: Credential Guard, LSASS as a protected process (RunAsPPL).
 - **Say**: "Mimikatz-style LSASS access is Sysmon 10 with a telltale
   GrantedAccess mask. Credential Guard plus that detection covers most of it."

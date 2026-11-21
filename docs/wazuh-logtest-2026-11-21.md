@@ -150,3 +150,68 @@ procdump the rule would need `0x1fffff` (and `0x1438`, another common procdump
 mask) added, at the cost of more false positives, since backup and AV agents also
 request broad access. That is a real tuning tradeoff, not a one-line win, so I am
 recording the miss rather than quietly widening the rule.
+
+### The fix (same day)
+
+Rule 100150 and `lsass_access.yml` now match:
+
+| Mask | Why |
+|---|---|
+| `0x1010`, `0x1410` | read memory (Mimikatz sekurlsa; comsvcs 2nd open) — kept |
+| `0x1438`, `0x143a` | read + write/operation, + create thread (procdump, Mimikatz) |
+| `0x1fffff` | PROCESS_ALL_ACCESS (procdump `-ma`, comsvcs 1st open) — the miss |
+| `0x1f0fff`-`0x1f3fff` | all-access values on older builds and tools |
+
+The Wazuh match is `pcre2` `(?i)^0x(1010|1410|1438|143a|1fffff|1f[0-3]fff)$`,
+still anchored, still under `61612, 92900`.
+
+**Exclusions, full path only:**
+
+- `C:\Program Files\Windows Defender\MsMpEng.exe`
+- `C:\ProgramData\Microsoft\Windows Defender\Platform\<one version dir>\MsMpEng.exe`
+
+That is the whole list. Every benign lsass open captured on DC01 and WS01 was
+Defender (`0x1000`, `0x101000`) or svchost (`0x1000`, `0x3000`). None of those
+masks are in the new list, so no captured benign event needed an exclusion and
+there is no other legit full-access open to list. svchost is deliberately **not**
+excluded: it never asked for a high-risk mask here, and excluding it would hide a
+dumper injected into svchost. The Defender exclusion is there because Defender
+can request broad access during scans; it matches the full path, so a renamed
+`MsMpEng.exe` dropped anywhere else still alerts.
+
+No real Defender event exercises the exclusion, so
+`tests/wazuh/lsass_defender_synthetic.jsonl` holds five clones of a real Defender
+event with only `sourceImage` and `grantedAccess` changed (synthetic, like the
+Kerberoast clones).
+
+### Before / after (logtest, every captured Sysmon 10 on lsass)
+
+| Event | Count | Before | After |
+|---|---|---|---|
+| WS01 procdump64.exe `0x1fffff` | 2 | 61612, level 0 — **miss** | **100150, level 12** |
+| WS01 rundll32 comsvcs `0x1fffff` | 1 | 61612, level 0 — **miss** | **100150, level 12** |
+| WS01 rundll32 comsvcs `0x1410` | 1 | 100150, level 12 | 100150, level 12 |
+| DC01 powershell.exe `0x1010` (stand-in) | 1 | 100150, level 12 | 100150, level 12 |
+| DC01 + WS01 MsMpEng.exe `0x1000` | 50 | 61612, level 0 | 61612, level 0 |
+| DC01 MsMpEng.exe `0x101000` | 9 | stock 92900, level 12 | stock 92900, level 12 (not 100150) |
+| DC01 + WS01 svchost.exe `0x1000` / `0x3000` | 53 | 61612, level 0 | 61612, level 0 |
+| synthetic: Defender Program Files path, `0x1fffff` | 1 | — | 61612, level 0 (excluded) |
+| synthetic: Defender Platform path, `0x1fffff` | 1 | — | 61612, level 0 (excluded) |
+| synthetic: `C:\lab\MsMpEng.exe`, `0x1fffff` | 1 | — | **100150** (name alone does not exclude) |
+| synthetic: `C:\Users\Public\Windows Defender\MsMpEng.exe`, `0x1410` | 1 | — | **100150** |
+| synthetic: Platform path two dirs deep, `0x1fffff` | 1 | — | **100150** |
+
+Non-LSASS events were unchanged (100151 x45, 100152 x2, 100155 x2, 100153/100154
+on the Kerberoast sets). The Sigma rule, checked with the same field logic in
+Python (no sigma-cli here), gives the same hit/no-hit on every row.
+
+**The tradeoff.** Matching `0x1fffff` means anything that opens lsass with full
+access alerts unless its exact path is allowlisted: backup agents, EDR and
+non-Defender AV, crash dumpers like WER, and admins running procdump on purpose.
+None appeared in this lab, so none are excluded; a real network will need its
+own path allowlist built from a week of its own Sysmon 10 data. That is the price
+of catching procdump, and it is worth paying for a level-12 credential-theft
+rule.
+
+Rerun: same container steps as above, then
+`run_logtest.py /tmp/wlt/main.jsonl /tmp/wlt/ws01_events.jsonl /tmp/wlt/lsass_defender_synthetic.jsonl`.

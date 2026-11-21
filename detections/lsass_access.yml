@@ -1,7 +1,7 @@
 title: Suspicious LSASS Memory Access
 id: 8bc7081f-aa3b-4bcd-8c8b-51df7c41e0e0
 status: experimental
-description: Detects processes opening LSASS with read access, as credential dumping tools (Mimikatz) do.
+description: Detects processes opening LSASS with read or full access, as credential dumpers (Mimikatz, procdump -ma, comsvcs MiniDump) do.
 logsource:
   product: windows
   category: process_access
@@ -10,11 +10,22 @@ detection:
     EventID: 10                      # Sysmon ProcessAccess
     TargetImage|endswith: '\lsass.exe'
     GrantedAccess:
-      - '0x1010'
-      - '0x1410'
-  condition: selection
+      - '0x1010'      # VM_READ | QUERY_LIMITED (Mimikatz sekurlsa)
+      - '0x1410'      # + QUERY_INFORMATION (comsvcs MiniDump 2nd open)
+      - '0x1438'      # read + write/operation (procdump)
+      - '0x143a'      # + CREATE_THREAD (Mimikatz)
+      - '0x1fffff'    # PROCESS_ALL_ACCESS (procdump -ma, comsvcs 1st open)
+      - '0x1f0fff'    # all-access variants on older builds/tools
+      - '0x1f1fff'
+      - '0x1f2fff'
+      - '0x1f3fff'
+  filter_defender:                   # full path only; a MsMpEng.exe elsewhere still alerts
+    SourceImage: 'C:\Program Files\Windows Defender\MsMpEng.exe'
+  filter_defender_platform:
+    SourceImage|re: '(?i)^C:\\ProgramData\\Microsoft\\Windows Defender\\Platform\\[^\\]+\\MsMpEng\.exe$'
+  condition: selection and not 1 of filter_*
 falsepositives:
-  - Some AV/EDR and backup agents legitimately read LSASS allowlist them
+  - Backup, EDR and other AV agents that open LSASS with full access; allowlist them by full SourceImage path, never by file name
 level: high
 tags:
   - attack.credential_access

@@ -1,10 +1,14 @@
 <!-- Wazuh local rule: LSASS memory access via Sysmon Event 10 (credential dumping) -->
 <!-- Place in /var/ossec/etc/rules/local_rules.xml. Requires Sysmon + wazuh agent. -->
+<!-- Masks: 0x1010/0x1410 read (Mimikatz, comsvcs 2nd open), 0x1438/0x143a read+write/thread (procdump, Mimikatz), -->
+<!-- 0x1fffff = PROCESS_ALL_ACCESS (procdump -ma, comsvcs 1st open), 0x1f0fff-0x1f3fff = all-access on older builds/tools. -->
 <group name="sysmon,windows,credential_access,">
   <rule id="100150" level="12">
     <if_sid>61612, 92900</if_sid>  <!-- also under stock 92900, which otherwise claims the event first -->
     <field name="win.eventdata.targetImage">lsass\.exe$</field>
-    <field name="win.eventdata.grantedAccess">^0x1010$|^0x1410$</field>  <!-- anchored: unanchored 0x1010 also matched Defender 0x101000 -->
+    <field name="win.eventdata.grantedAccess" type="pcre2">(?i)^0x(1010|1410|1438|143a|1fffff|1f[0-3]fff)$</field>  <!-- anchored: unanchored 0x1010 also matched Defender 0x101000 -->
+    <!-- Defender excluded by full path only: a MsMpEng.exe anywhere else still alerts -->
+    <field name="win.eventdata.sourceImage" type="pcre2" negate="yes">(?i)^C:\\Program Files\\Windows Defender\\MsMpEng\.exe$|^C:\\ProgramData\\Microsoft\\Windows Defender\\Platform\\[^\\]+\\MsMpEng\.exe$</field>
     <description>Credential dumping: suspicious process accessed LSASS memory ($(win.eventdata.sourceImage))</description>
     <mitre>
       <id>T1003.001</id>
