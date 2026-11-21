@@ -100,7 +100,7 @@ fired with `if_group windows_security` as written.
 | 100153, 100154 | `detections/wazuh_kerberoast.xml` | kerberoast.yml |
 | 100155 | `detections/wazuh_da_group_change.xml` | da_group_change.yml |
 
-Written by hand. sigma-cli is not installed here and pySigma has no official
+Written by hand. pySigma has no official
 Wazuh backend, so there was no converter to trust.
 
 ## WS01: a real LSASS dump (2026-11-21, later same day)
@@ -203,7 +203,7 @@ Kerberoast clones).
 
 Non-LSASS events were unchanged (100151 x45, 100152 x2, 100155 x2, 100153/100154
 on the Kerberoast sets). The Sigma rule, checked with the same field logic in
-Python (no sigma-cli here), gives the same hit/no-hit on every row.
+Python, gives the same hit/no-hit on every row.
 
 **The tradeoff.** Matching `0x1fffff` means anything that opens lsass with full
 access alerts unless its exact path is allowlisted: backup agents, EDR and
@@ -215,3 +215,8 @@ rule.
 
 Rerun: same container steps as above, then
 `run_logtest.py /tmp/wlt/main.jsonl /tmp/wlt/ws01_events.jsonl /tmp/wlt/lsass_defender_synthetic.jsonl`.
+
+
+## sigma-cli check (2026-11-21, sigma-cli 4.0.1)
+
+`sigma check detections/*.yml` initially failed: kerberoast.yml used the deprecated `| count() by` pipe condition (unconvertible), four ATT&CK tactic tags used underscores, and asrep_roast.yml expressed `PreAuthType` 0 as a string. Fixed: kerberoast split into a building-block rule plus a `value_count` correlation (ServiceName distinct > 5 by IpAddress in 5m), tags hyphenated, number unquoted. Now: no rule, condition or validation issues; all five convert with `sigma convert -t splunk -p splunk_windows`.

@@ -28,5 +28,5 @@ falsepositives:
   - Backup, EDR and other AV agents that open LSASS with full access; allowlist them by full SourceImage path, never by file name
 level: high
 tags:
-  - attack.credential_access
+  - attack.credential-access
   - attack.t1003.001

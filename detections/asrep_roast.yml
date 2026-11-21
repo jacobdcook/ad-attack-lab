@@ -8,12 +8,12 @@ logsource:
 detection:
   selection:
     EventID: 4768
-    PreAuthType: '0'               # 0 = pre-auth not required = roastable
+    PreAuthType: 0               # 0 = pre-auth not required = roastable
     TicketEncryptionType: '0x17'   # RC4
   condition: selection
 falsepositives:
   - Rare legacy accounts intentionally configured without pre-auth baseline them
 level: high
 tags:
-  - attack.credential_access
+  - attack.credential-access
   - attack.t1558.004

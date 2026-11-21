@@ -1,7 +1,8 @@
-title: Potential Kerberoasting via Service Ticket Requests
-id: 84e45c46-a833-448a-9de1-5384487134f6
+title: RC4 service ticket request (Kerberoasting building block)
+id: b2a077f2-905b-4c35-acca-fe54775c6797
+name: rc4_tgs_request
 status: experimental
-description: Detects bulk TGS-REP requests using weak RC4 encryption, the signature of Kerberoasting.
+description: One TGS request for a user service account with weak RC4 encryption. Alone this is normal; the correlation below alerts on many distinct services from one source.
 logsource:
   product: windows
   service: security
@@ -13,12 +14,33 @@ detection:
     ServiceName|startswith: 'krbtgt'
   filter_machine:
     ServiceName|endswith: '$'      # machine accounts, not Kerberoast targets
-  timeframe: 5m
-  condition: selection and not filter_krbtgt and not filter_machine | count(ServiceName) by IpAddress > 5
+  condition: selection and not filter_krbtgt and not filter_machine
+falsepositives:
+  - Vulnerability scanners enumerating SPNs
+  - Legacy applications still using RC4
+level: low
+tags:
+  - attack.credential-access
+  - attack.t1558.003
+---
+title: Potential Kerberoasting via Service Ticket Requests
+id: 84e45c46-a833-448a-9de1-5384487134f6
+status: experimental
+description: More than five distinct user service accounts requested with RC4 from one source in five minutes, the signature of Kerberoasting.
+correlation:
+  type: value_count
+  rules:
+    - rc4_tgs_request
+  group-by:
+    - IpAddress
+  timespan: 5m
+  condition:
+    field: ServiceName
+    gt: 5
 falsepositives:
   - Vulnerability scanners enumerating SPNs
   - Legacy applications still using RC4
 level: high
 tags:
-  - attack.credential_access
+  - attack.credential-access
   - attack.t1558.003
