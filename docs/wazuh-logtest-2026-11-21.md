@@ -102,3 +102,51 @@ fired with `if_group windows_security` as written.
 
 Written by hand. sigma-cli is not installed here and pySigma has no official
 Wazuh backend, so there was no converter to trust.
+
+## WS01: a real LSASS dump (2026-11-21, later same day)
+
+The LSASS result above used a stand-in: a PowerShell `OpenProcess(0x1010)` on the
+DC, not a real dumper. To test the rule honestly I built WS01, a Windows 10 Pro
+client (Win10 22H2 image; the Win10 Enterprise eval ISO is no longer offered post
+end-of-support, and Win11 eval forces TPM/SecureBoot on the VM), joined it to
+`CORP.LOCAL` on the isolated adlab network, installed the same Sysmon config, and
+ran two real dumps against lsass:
+
+- `rundll32.exe C:\Windows\System32\comsvcs.dll, MiniDump <pid> ... full`
+- `procdump64.exe -accepteula -ma lsass.exe`
+
+Both produced a ~51 MB dump. Sysmon logged 54 event-10 opens on lsass. The access
+masks the real tools used, and what logtest fired:
+
+| Source | GrantedAccess | Count | Rule fired |
+|---|---|---|---|
+| procdump64.exe | 0x1fffff | 2 | stock 61612, level 0 — **miss** |
+| rundll32.exe (comsvcs) | 0x1fffff | 1 | stock 61612, level 0 — **miss** |
+| rundll32.exe (comsvcs) | 0x1410 | 1 | **100150, level 12 — hit** |
+| MsMpEng.exe (Defender) | 0x1000 | 41 | stock 61612, level 0 |
+| svchost.exe | 0x1000 / 0x3000 | 9 | stock 61612, level 0 |
+
+(Events in `tests/wazuh/ws01_events.jsonl`; the four dumper events in
+`ws01_dumpers.jsonl`.)
+
+### The honest result
+
+**procdump -ma misses rule 100150 entirely.** A full `-ma` dump opens lsass with
+`0x1fffff` (PROCESS_ALL_ACCESS), which is not in the rule's `^0x1010$|^0x1410$`
+list, so logtest returns only the stock level-0 rule. No alert.
+
+**comsvcs MiniDump is caught, but barely.** It opens lsass twice: once with
+`0x1fffff` (missed) and once with `0x1410` (caught by 100150 at level 12). The
+alert fires on the second open, not the first. If comsvcs had used only the
+all-access handle, it would have slipped past too.
+
+The Sigma rule `lsass_access.yml` keys on the same two masks (`0x1010`, `0x1410`),
+so by its field logic it reaches the identical verdict: it matches the single
+comsvcs `0x1410` open and misses every `0x1fffff` open, i.e. all of procdump.
+
+So the part-1 stand-in (`0x1010`) flattered the rule. A real credential dumper
+mostly uses `0x1fffff`, and the narrow two-mask list does not catch it. To catch
+procdump the rule would need `0x1fffff` (and `0x1438`, another common procdump
+mask) added, at the cost of more false positives, since backup and AV agents also
+request broad access. That is a real tuning tradeoff, not a one-line win, so I am
+recording the miss rather than quietly widening the rule.
