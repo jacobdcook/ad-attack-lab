@@ -22,6 +22,10 @@ loss of capability).
 Each arrow has a **detection** in [docs/defense.md](docs/defense.md), which is
 the real deliverable for a SOC / detection-engineering role.
 
+The Wazuh rules (`detections/wazuh_*.xml`, IDs 100150-100155) were replayed
+against the real DC events in `wazuh-logtest` 4.9.1; results and the replay
+commands are in [docs/wazuh-logtest-2026-11-21.md](docs/wazuh-logtest-2026-11-21.md).
+
 ## Topology (minimal, fits 62 GB RAM)
 
 | VM | Role | RAM | Notes |

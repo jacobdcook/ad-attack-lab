@@ -1,0 +1,12 @@
+<!-- Wazuh local rule: member added to Domain Admins (Event 4728) -->
+<group name="windows,privilege_escalation,">
+  <rule id="100155" level="12">
+    <if_group>windows_security</if_group>
+    <field name="win.system.eventID">^4728$</field>
+    <field name="win.eventdata.targetUserName">^Domain Admins$</field>
+    <description>$(win.eventdata.memberName) added to Domain Admins by $(win.eventdata.subjectUserName)</description>
+    <mitre>
+      <id>T1098</id>
+    </mitre>
+  </rule>
+</group>

@@ -1,0 +1,22 @@
+<!-- Wazuh local rules: Kerberoasting (Event 4769 RC4 service tickets, >5 distinct SPNs from one IP in 5 min) -->
+<group name="windows,credential_access,">
+  <rule id="100153" level="3">
+    <if_sid>60106, 92651</if_sid>  <!-- stock logon-success rules claim 4769 first -->
+    <field name="win.system.eventID">^4769$</field>
+    <field name="win.eventdata.ticketEncryptionType">^0x17$</field>
+    <field name="win.eventdata.serviceName" negate="yes">^krbtgt|\$$</field>  <!-- skip krbtgt and machine accounts -->
+    <description>RC4 service ticket requested for $(win.eventdata.serviceName) from $(win.eventdata.ipAddress)</description>
+    <mitre>
+      <id>T1558.003</id>
+    </mitre>
+  </rule>
+  <rule id="100154" level="12" frequency="6" timeframe="300">
+    <if_matched_sid>100153</if_matched_sid>
+    <same_field>win.eventdata.ipAddress</same_field>
+    <different_field>win.eventdata.serviceName</different_field>
+    <description>Kerberoasting: RC4 service tickets for 6+ different SPNs from $(win.eventdata.ipAddress) in 5 minutes</description>
+    <mitre>
+      <id>T1558.003</id>
+    </mitre>
+  </rule>
+</group>

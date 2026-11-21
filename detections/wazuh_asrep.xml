@@ -1,0 +1,13 @@
+<!-- Wazuh local rule: AS-REP roasting (Event 4768 with pre-auth not required, RC4 ticket) -->
+<group name="windows,credential_access,">
+  <rule id="100152" level="12">
+    <if_group>windows_security</if_group>
+    <field name="win.system.eventID">^4768$</field>
+    <field name="win.eventdata.preAuthType">^0$</field>
+    <field name="win.eventdata.ticketEncryptionType">^0x17$</field>
+    <description>AS-REP roasting: TGT issued without pre-authentication for $(win.eventdata.targetUserName)</description>
+    <mitre>
+      <id>T1558.004</id>
+    </mitre>
+  </rule>
+</group>
